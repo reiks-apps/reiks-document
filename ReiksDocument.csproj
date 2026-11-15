@@ -9,7 +9,7 @@
     <AssemblyName>ReiksDocument</AssemblyName>
     <RootNamespace>ReiksDocument</RootNamespace>
     <Product>Reiks Document</Product>
-    <Version>0.37.0</Version>
+    <Version>0.37.1</Version>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);WPF0001</NoWarn>

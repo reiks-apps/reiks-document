@@ -117,7 +117,7 @@ sealed class ParaData
 /// <summary>The layout rules of FORMAT.md. All arithmetic is in integers (EMU).</summary>
 sealed class LayoutEngine
 {
-    public const int RulesVersion = 25;
+    public const int RulesVersion = 26;
     /// <summary>Tables: room between the edge of a cell and its text, at the sides and above and below; thickness of the lines.</summary>
     public const int CellPadX = 72000, CellPadY = 36000, CellBorder = 9525;
     /// <summary>Header: its text begins this far below the top of the page. Footer: its text ends this far above the bottom.</summary>
@@ -1294,8 +1294,18 @@ sealed class LayoutEngine
         foreach (var f in pg.Floats)
         {
             if (!Keeps(f)) continue;
-            int at = Math.Max(0, AnchorOf(pg, f, pg.Lines.Count));
+            int unit = AnchorOf(pg, f, pg.Lines.Count), at = Math.Max(0, unit);
             long end = (long)f.Y + f.Pic.Height + FloatGap;
+            // The picture moves with its line: it never comes up past the foot of the paragraph above it.
+            RoomGap? above = null;
+            if (unit >= 0)
+                foreach (var g in gaps)
+                    if (g.Below <= unit) above = g;
+            if (above != null)
+            {
+                var up = pg.Lines[above.Above].Line;
+                above.Least = Math.Max(above.Least, above.Size - Math.Max(0, f.Y - ((long)up.Top + up.Height)));
+            }
             foreach (var g in gaps)
             {
                 if (g.Above < at) continue;

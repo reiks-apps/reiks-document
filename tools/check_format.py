@@ -1597,13 +1597,21 @@ def make_gaps(U, u, low, virt=None, pics=()):
         else:
             m = 250 if 2 * size < usual else 400
             g['most'] = size + size * m // 1000
-    for E, pp in pics:
+    for E, pp, py_, hasu in pics:
         for g in gaps:
             if g['a'] >= pp and g['atop'] < E:
                 if g['btop'] < E:
                     g['least'] = g['most'] = g['size']
                 else:
                     g['least'] = max(g['least'], g['size'] - (g['btop'] - E))
+        if hasu:
+            lastg = None
+            for g in gaps:
+                if g['b'] <= pp:
+                    lastg = g
+            if lastg is not None:
+                g = lastg
+                g['least'] = max(g['least'], g['size'] - max(0, py_ - (g['atop'] + U[g['a']][2])))
     return gaps
 
 
@@ -1793,7 +1801,7 @@ def compute_layout(doc):
         for f in cur.floats:
             if f.wrap in ('topbottom', 'square'):
                 q = unit_of(f)
-                out.append((f.y + f.h + 127000, 0 if q is None else q))
+                out.append((f.y + f.h + 127000, 0 if q is None else q, f.y, q is not None))
         return out
 
     def commit(tops):
@@ -2457,7 +2465,7 @@ def sha(b):
 
 def check_manifest(rep, z, man, doc):
     """Section 3 conditions 1-4 (the fingerprints and the fonts)."""
-    for key, want in (('formatVersion', 26), ('layoutRules', 25)):
+    for key, want in (('formatVersion', 26), ('layoutRules', 26)):
         if man.get(key) != want:
             rep.other += 1
             rep.add('manifest %s: expected %r found %r' % (key, want, man.get(key)))

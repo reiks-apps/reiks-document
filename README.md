@@ -154,6 +154,8 @@ bin\Release\net10.0-windows\ReiksDocument.exe --printtest samples\Sample.docu ou
 
 **Laying a document out again.** `ReiksDocument.exe --resave in.docu out.docu` opens a document, lays it out by the rules of this version and writes it to another file.
 
+**Documents made by chance.** `ReiksDocument.exe --random <folder> <count> <seed>` makes that many documents from the seed (headings, lists, tables, footnotes, pictures in the line and floating, equations, empty paragraphs, page breaks, blocks, lines at the edges, tall lines, different paper and margins), lays each out, checks that it is well formed, the same when laid out twice and the same after saving and opening, saves it as `random-<n>.docu` and writes `random.log`. Then `python tools\check_format.py` checks them against FORMAT.md (it takes the file names, not a pattern; pass them in batches).
+
 **Speed.** `ReiksDocument.exe --bench times.txt 6000` makes a long document of that many paragraphs (6000 are about 740 pages) and writes to the file how long the things take that happen while somebody types in it: a typed letter with and without the window, a new paragraph, undo, drawing a page, saving, opening, the recovery copy and the PDF. Nothing of the user's is touched; the window it opens for this stays off the screen.
 
 ## The source

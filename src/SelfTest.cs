@@ -705,7 +705,7 @@ static class SelfTest
         return d;
     }
 
-    static LayoutEngine Fresh(Document doc)
+    internal static LayoutEngine Fresh(Document doc)
     {
         var d = RksFile.ParseContent(RksFile.ContentJson(doc));
         var e = new LayoutEngine(d);
@@ -714,7 +714,7 @@ static class SelfTest
     }
 
     /// <summary>Null when both layouts place everything at the same positions.</summary>
-    static string? Diff(LayoutEngine a, LayoutEngine b)
+    internal static string? Diff(LayoutEngine a, LayoutEngine b)
     {
         if (a.Pages.Count != b.Pages.Count) return $"pages {a.Pages.Count} / {b.Pages.Count}";
         for (int pg = 0; pg < a.Pages.Count; pg++)
@@ -791,7 +791,7 @@ static class SelfTest
         x.Start == y.Start && x.Length == y.Length && x.X == y.X && x.Top == y.Top && x.Height == y.Height
         && x.Baseline == y.Baseline && x.Page == y.Page && x.Row == y.Row && x.Mark == y.Mark && x.MarkX == y.MarkX && x.Adv.AsSpan().SequenceEqual(y.Adv);
 
-    static string? Invariants(LayoutEngine e)
+    internal static string? Invariants(LayoutEngine e)
     {
         var doc = e.Doc;
         int bottom = doc.Page.Height - doc.Page.Bottom;
@@ -832,6 +832,9 @@ static class SelfTest
                 {
                     var (para, l) = lines[i];
                     if (l.Top >= f.Y + f.Pic.Height || l.Top + l.Height <= f.Y) continue;
+                    // An empty line shows nothing; where the room gave, it may come to lie over a picture.
+                    var fp = doc.Body[para];
+                    if (doc.AdaptSpacing && fp.Table == null && fp.Length == 0 && l.Mark == null && doc.BordersOf(fp).None) continue;
                     string t = doc.Body[para].Text;
                     int end = l.End;
                     while (end > l.Start && (t[end - 1] == ' ' || t[end - 1] == Document.LineBreak)) end--;

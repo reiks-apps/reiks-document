@@ -51,6 +51,8 @@ static class Program
         }
         if (args.Length > 1 && args[0] == "--bench")
             return Bench.Run(args[1], args.Length > 2 && int.TryParse(args[2], out int count) ? Math.Clamp(count, 10, 200000) : 6000);
+        if (args.Length > 3 && args[0] == "--random" && int.TryParse(args[2], out int randomCount) && int.TryParse(args[3], out int randomSeed))
+            return RandomDocs.Write(args[1], Math.Clamp(randomCount, 1, 100000), randomSeed);
         if (args.Length > 1 && args[0] == "--sample")
         {
             SampleDoc.Write(args[1]);

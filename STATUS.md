@@ -1,6 +1,6 @@
 # Status
 
-Version 0.37.0, 15 November 2026. Format version 26, layout rules version 25.
+Version 0.37.1, 16 November 2026. Format version 26, layout rules version 26.
 
 This is a first version. It is meant for trying the idea of a document format that stores exact positions, not yet for daily work.
 
@@ -106,6 +106,7 @@ This is a first version. It is meant for trying the idea of a document format th
 - The self-test has 314 checks and all pass. They cover: the same positions from two layouts and after save and reopen, for eleven sample documents (up to 61 pages); the stored layout coming back byte for byte; a changed font fingerprint being noticed; 700 random edits each followed by a comparison with a layout from scratch; undo and redo returning the exact documents; the structure of 20 typed equations; find, replace, copying and erasing formats, and the word count; the preferences being kept and read back; the window being out of screenshots unless they are allowed; the window turning dark and back to light while open.
 
 - `tools\check_format.py`, a separate program written from FORMAT.md alone, recomputes the layout of all sample documents (4,411 lines, 202 images, equations and charts, 369 table cells and 32 header and footer texts in thirteen files) and finds no difference from the stored positions. Not reached by any sample, and so not confirmed by it: indents other than 0, justified lines that contain a tab, the fallback when a font or a style of it is missing, symbol fonts, a paragraph's own spacing or indent inside a footnote, graphs whose formulas have different numbers of points, and the three things that are only drawn and not stored as positions: underline, strike-through and highlight.
+- Documents made by chance (`--random`, since 0.37.0): 1,900 of them, with every kind of content and mostly with the room between paragraphs giving, pass the program's own checks; the first 400 also agree with `tools\check_format.py` line by line. The first run found one fault, fixed in 0.37.1: a picture that pushes the text below it could come up into the paragraph above it when the room gave.
 
 - `tools\check_pdf.py` opens the PDFs of ten sample documents with a separate PDF engine (PyMuPDF): all open without repair, their text can be read out, and each of about 122,000 compared characters stands within 0.005 point of the place the layout gives it. Pages of the sample were also drawn by that engine and looked at.
 
