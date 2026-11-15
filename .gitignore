@@ -1,0 +1,12 @@
+bin/
+obj/
+dist/
+selftest-out/
+notes/
+latex-test/
+setup/bin/
+setup/obj/
+setup/publish/
+setup/payload.zip
+*.log
+__pycache__/

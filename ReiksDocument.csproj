@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>ReiksDocument</AssemblyName>
+    <RootNamespace>ReiksDocument</RootNamespace>
+    <Product>Reiks Document</Product>
+    <Version>0.37.0</Version>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);WPF0001</NoWarn>
+    <ApplicationIcon>assets\ReiksDocument.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The icon of a document lies beside the program, where Windows can find it. -->
+    <!-- The setup file is a project of its own (setup\ReiksDocumentSetup.csproj). -->
+    <Compile Remove="setup\**;dist\**" />
+    <None Include="assets\DocuFile.ico" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The lists of patterns for dividing words: plain text, in a folder of their own beside the program. -->
+    <None Include="assets\hyph\**" CopyToOutputDirectory="PreserveNewest" Link="hyph\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

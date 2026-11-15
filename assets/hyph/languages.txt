@@ -1,0 +1,6 @@
+# The languages whose words Reiks Document can divide at the ends of lines by patterns.
+# Each line: id|name|least letters before a hyphen|least letters behind it
+# A language is offered when its file hyph-<id>.pat.txt lies in this folder; hyph-<id>.hyp.txt, if there,
+# holds words divided by hand. Spanish needs no file: it goes by its rules for syllables.
+en-us|English|2|3
+sv|Swedish|2|2

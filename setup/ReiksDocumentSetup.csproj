@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The setup file: one program that carries Reiks Document inside (payload.zip) and puts it on a PC.
+       tools\make_setup.py builds it. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>ReiksDocumentSetup</AssemblyName>
+    <RootNamespace>ReiksDocument</RootNamespace>
+    <Product>Reiks Document Setup</Product>
+    <Version>0.37.0</Version>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);WPF0001</NoWarn>
+    <ApplicationIcon>..\assets\ReiksDocument.ico</ApplicationIcon>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\src\FileType.cs" Link="FileType.cs" />
+    <EmbeddedResource Include="payload.zip" LogicalName="payload.zip" />
+  </ItemGroup>
+
+</Project>

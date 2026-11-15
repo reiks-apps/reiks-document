@@ -1,0 +1,48 @@
+Lists of patterns for dividing words at the ends of lines
+==========================================================
+
+Reiks Document reads the files in this folder as data. They are not part of the program, they
+were not written for it, and each keeps the licence its authors gave it. All of them were taken,
+unchanged, from the TeX hyphenation project (the hyph-utf8 package):
+
+    https://github.com/hyphenation/tex-hyphen
+    http://www.hyphenation.org/tex
+
+
+English, American spelling
+--------------------------
+
+    hyph-en-us.tex       the file of the authors, complete and unchanged, with its notices
+    hyph-en-us.pat.txt   the patterns of that file as a plain list, as the project gives them out
+    hyph-en-us.hyp.txt   the words divided by hand of that file, as a plain list
+
+Copyright (C) 1990, 2004, 2005 Gerard D.C. Kuiken
+
+    Copying and distribution of this file, with or without modification,
+    are permitted in any medium without royalty provided the copyright
+    notice and this notice are preserved.
+
+The file holds the patterns of Donald E. Knuth's hyphen.tex (the Plain TeX hyphenation tables,
+made with Frank M. Liang's method) together with Dr. Kuiken's additions; hyph-en-us.tex says
+which lines are whose.
+
+
+Swedish
+-------
+
+    hyph-sv.tex          the file of the author, complete and unchanged, with its notices
+    hyph-sv.pat.txt      the patterns of that file as a plain list, as the project gives them out
+
+Copyright (C) 1994 Jan Michael Rynning
+
+Licence: the LaTeX Project Public License (LPPL), version 1.2 or any later version.
+The text of the licence: https://www.latex-project.org/lppl/
+
+hyph-sv.pat.txt is not the author's own file: it is the list of patterns taken out of
+hyph-sv.tex by the TeX hyphenation project, under another name, and nothing in it was changed
+for Reiks Document. The author's own file lies beside it.
+
+
+languages.txt in this folder belongs to Reiks Document. It names the languages and how many
+letters at least stand before and behind a hyphen (the values the files above give for
+typesetting).
