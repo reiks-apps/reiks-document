@@ -1168,6 +1168,81 @@ static class SelfTest
             back && little && left && apart && found && whole, $"back {back} little {little} left {left} apart {apart} cut {found} whole {whole}");
     }
 
+    /// <summary>A small Word file with the given body, in the usual form or (with strict) in the strict form of the format.</summary>
+    static void WriteDocx(string file, string body, bool strict = false)
+    {
+        File.Delete(file);
+        using var zip = System.IO.Compression.ZipFile.Open(file, System.IO.Compression.ZipArchiveMode.Create);
+        void Put(string name, string xml)
+        {
+            using var w = new StreamWriter(zip.CreateEntry(name).Open());
+            w.Write(xml);
+        }
+        string ns = strict ? "http://purl.oclc.org/ooxml/wordprocessingml/main" : "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        Put("_rels/.rels", "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"r1\" Type=\""
+            + (strict ? "http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument" : "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument")
+            + "\" Target=\"word/document.xml\"/></Relationships>");
+        Put("word/document.xml", "<w:document xmlns:w=\"" + ns + "\"><w:body>" + body + "</w:body></w:document>");
+    }
+
+    static void WordRobustChecks(string outDir)
+    {
+        static string P(string text) => "<w:p><w:r><w:t>" + text + "</w:t></w:r></w:p>";
+        static IEnumerable<string> Texts(Document d) => d.Body.Concat(d.Cells.Values.SelectMany(c => c.Paras)).Select(p => p.Text);
+        // Tables nested twenty thousand deep in a cell: read without running out of stack, every text once.
+        var deep = new StringBuilder();
+        for (int i = 0; i < 20000; i++) deep.Append("<w:tbl><w:tr><w:tc>");
+        deep.Append(P("Deep text."));
+        for (int i = 0; i < 20000; i++) deep.Append("</w:tc></w:tr></w:tbl>");
+        string deepFile = Path.Combine(outDir, "word-deep.docx");
+        WriteDocx(deepFile, "<w:tbl><w:tr><w:tc>" + deep + P("In the cell.") + "</w:tc></w:tr></w:tbl>" + P("After."));
+        bool deepRead = false;
+        string deepNote = "";
+        try
+        {
+            var dr = DocxImport.Read(deepFile);
+            var texts = Texts(dr.Doc).ToList();
+            deepRead = texts.Count(t => t == "Deep text.") == 1 && texts.Contains("In the cell.") && texts.Contains("After.");
+            deepNote = string.Join(" ", dr.Notes);
+        }
+        catch (InvalidDataException ex) { deepNote = ex.Message; }
+        // A table inside a cell: each of its cells once.
+        string twoFile = Path.Combine(outDir, "word-nested.docx");
+        WriteDocx(twoFile, "<w:tbl><w:tr><w:tc><w:tbl><w:tr><w:tc>" + P("A") + "</w:tc><w:tc>" + P("B") + "</w:tc></w:tr><w:tr><w:tc>"
+            + "<w:tbl><w:tr><w:tc>" + P("C") + "</w:tc></w:tr></w:tbl>" + P("D") + "</w:tc></w:tr></w:tbl>" + P("E") + "</w:tc></w:tr></w:tbl>" + P("After."));
+        var nested = Texts(DocxImport.Read(twoFile).Doc).ToList();
+        bool once = new[] { "A", "B", "C", "D", "E" }.All(t => nested.Count(x => x == t) == 1);
+        Check("word: tables nested very deep inside a cell are read without the program running out of stack, and each nested cell once",
+            deepRead && once, $"deep {deepRead} once {once} / {deepNote}");
+        // The strict form of the format.
+        string strictFile = Path.Combine(outDir, "word-strict.docx");
+        WriteDocx(strictFile, P("Written in the strict form.") + "<w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Bold and centred.</w:t></w:r></w:p>", strict: true);
+        bool strictRead = false;
+        try
+        {
+            var sd = DocxImport.Read(strictFile).Doc;
+            strictRead = sd.Body.Any(p => p.Text == "Written in the strict form.") && sd.Body.Any(p => p.Text == "Bold and centred." && p.Align == Align.Center && p.Runs[0].Props.Bold == true);
+        }
+        catch (InvalidDataException) { }
+        Check("word: a document saved in the strict form of the format is read like any other", strictRead);
+        // Files that cannot be read are refused in plain words: with a password, of the older kind, damaged.
+        string Refusal(string name, byte[] data)
+        {
+            string f = Path.Combine(outDir, name);
+            File.WriteAllBytes(f, data);
+            try { DocxImport.Read(f); return "read"; }
+            catch (InvalidDataException ex) { return ex.Message; }
+        }
+        byte[] ole = { 0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1 };
+        var locked = ole.Concat(new byte[504]).Concat(Encoding.Unicode.GetBytes("EncryptionInfo")).Concat(new byte[1000]).ToArray();
+        var older = ole.Concat(new byte[2000]).ToArray();
+        var whole = File.ReadAllBytes(strictFile);
+        var damaged = whole.Take(whole.Length / 2).ToArray();
+        string a = Refusal("word-password.docx", locked), b = Refusal("word-old.docx", older), c = Refusal("word-damaged.docx", damaged);
+        Check("word: a document with a password, one of the older kind, and a damaged file are refused in plain words",
+            a == DocxImport.PasswordText && b == DocxImport.OldText && c == DocxImport.DamagedText, $"{a} | {b} | {c}");
+    }
+
     static void BorderChecks()
     {
         var d = BordersDoc();
@@ -3155,6 +3230,7 @@ static class SelfTest
         CoverChecks();
         BorderChecks();
         SpacingChecks(outDir);
+        WordRobustChecks(outDir);
         Sample("borders", BordersDoc(), outDir, 1);
         Sample("spacing", SpacingDoc(), outDir, 2);
         var spacingOpen = RksFile.Open(Path.Combine(outDir, "spacing.docu"));

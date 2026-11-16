@@ -1472,7 +1472,7 @@ def layout_table(doc, para):
                 yy += L.h
             if k < len(cell) - 1:
                 yy += doc.pval(cp, 'after')
-        content = yy - 36000
+        content = min(yy - 36000, 1073741823)
         rows[r].cells.append((c, cx, cw, placed, rs))
         if rs == 1:
             rows[r].h = max(rows[r].h, content + 72000)
@@ -1484,7 +1484,7 @@ def layout_table(doc, para):
     for r, rs, need in spans:
         have = sum(rows[r + i].h for i in range(rs))
         if need > have:
-            rows[r + rs - 1].h += need - have
+            rows[r + rs - 1].h = min(rows[r + rs - 1].h + need - have, 1073741823)
     for row in rows:
         row.tbl = rows
         row.tx = tleft
@@ -1972,7 +1972,7 @@ def compute_layout(doc):
                         y = top
         if 'table' in para:
             for blk in table_blocks(ls):
-                bh = sum(r_.h for r_ in blk)
+                bh = min(sum(r_.h for r_ in blk), 1073741823)
                 while True:
                     gap = doc.pval(para, 'before') if blk[0].r == 0 and cur.lines else 0
                     t = y + gap
@@ -2174,7 +2174,7 @@ def compute_layout(doc):
             for pi, row in p.cells:
                 for c, cx, w, placed, rs in row.cells:
                     cl.append({'p': pi, 'r': row.r, 'c': c, 'x': cx, 'y': row.y, 'w': w,
-                               'h': sum(row.tbl[row.r + i].h for i in range(rs)),
+                               'h': min(sum(row.tbl[row.r + i].h for i in range(rs)), 1073741823),
                                'lines': [{'p': k, 's': L.s, 'n': L.n, 'x': left + L.x, 'y': row.y + off,
                                           'h': L.h, 'b': row.y + off + L.base, 'a': list(L.a), 'hy': L.hy}
                                          for k, L, off, its in placed]})

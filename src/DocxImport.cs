@@ -44,8 +44,43 @@ static class DocxImport
     {
         // Read without keeping others out, so that a document that is open in Word can be opened here as well.
         using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-        using var zip = new ZipArchive(file, ZipArchiveMode.Read);
-        return new Reader(zip).Run();
+        var head = new byte[8];
+        int got = file.Read(head, 0, head.Length);
+        file.Position = 0;
+        if (got == head.Length && head.AsSpan().SequenceEqual(OldContainer))
+            throw new InvalidDataException(Locked(file) ? PasswordText : OldText);
+        ZipArchive zip;
+        try { zip = new ZipArchive(file, ZipArchiveMode.Read); }
+        catch (InvalidDataException) { throw new InvalidDataException(DamagedText); }
+        using (zip)
+        {
+            try { return new Reader(zip).Run(); }
+            catch (InvalidDataException ex) when (!ex.Message.StartsWith("This ", StringComparison.Ordinal))
+            {
+                // A part of the file that cannot be unpacked: the file is damaged. (The refusals of this reader begin with "This".)
+                throw new InvalidDataException(DamagedText, ex);
+            }
+            catch (Exception ex) when (ex is not (InvalidDataException or IOException or UnauthorizedAccessException or System.Xml.XmlException or OutOfMemoryException))
+            {
+                // Whatever else goes wrong inside a damaged file is said in plain words, and the program goes on.
+                throw new InvalidDataException(DamagedText, ex);
+            }
+        }
+    }
+
+    public const string PasswordText = "This Word document is protected with a password. Open it in Word, remove the password and save it; then it can be opened here.";
+    public const string OldText = "This is a Word document of the older kind (.doc) or another Office file. Only .docx can be read here; Word can save it as .docx.";
+    public const string DamagedText = "This file is damaged or is not a Word document, so it cannot be read.";
+
+    /// <summary>The first bytes of the older container of Office files (.doc, and .docx with a password).</summary>
+    static readonly byte[] OldContainer = { 0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1 };
+
+    /// <summary>Whether a file in the older container holds a Word document with a password: it has a part named EncryptionInfo.</summary>
+    static bool Locked(Stream s)
+    {
+        var data = new byte[(int)Math.Min(s.Length, MostBytes)];
+        s.ReadExactly(data);
+        return data.AsSpan().IndexOf(System.Text.Encoding.Unicode.GetBytes("EncryptionInfo")) >= 0;
     }
 
     /// <summary>What a style or a run says about the look; null where it says nothing.</summary>
@@ -142,9 +177,34 @@ static class DocxImport
             {
                 var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 200_000_000 };
                 using var reader = XmlReader.Create(new MemoryStream(data), settings);
-                return XDocument.Load(reader).Root;
+                return Transitional(XDocument.Load(reader).Root);
             }
             catch (XmlException) { return null; }
+        }
+
+        const string StrictRoot = "http://purl.oclc.org/ooxml/";
+
+        /// <summary>A part written in the strict form of the Office format gets the names of the usual (transitional) form, which
+        /// are the ones the reader looks for: http://purl.oclc.org/ooxml/a/b becomes http://schemas.openxmlformats.org/a/2006/b.</summary>
+        static XElement? Transitional(XElement? root)
+        {
+            if (root == null || !root.DescendantsAndSelf().Any(e => e.Name.NamespaceName.StartsWith(StrictRoot, StringComparison.Ordinal))) return root;
+            static XNamespace Map(XNamespace ns)
+            {
+                string s = ns.NamespaceName;
+                if (!s.StartsWith(StrictRoot, StringComparison.Ordinal)) return ns;
+                string rest = s[StrictRoot.Length..];
+                int slash = rest.IndexOf('/');
+                return slash < 0 ? ns : XNamespace.Get("http://schemas.openxmlformats.org/" + rest[..slash] + "/2006/" + rest[(slash + 1)..]);
+            }
+            foreach (var e in root.DescendantsAndSelf().ToList())
+            {
+                e.Name = Map(e.Name.Namespace) + e.Name.LocalName;
+                var attrs = e.Attributes().ToList();
+                if (attrs.Any(a => !a.IsNamespaceDeclaration && a.Name.NamespaceName.StartsWith(StrictRoot, StringComparison.Ordinal)))
+                    e.ReplaceAttributes(attrs.Where(a => !a.IsNamespaceDeclaration).Select(a => new XAttribute(Map(a.Name.Namespace) + a.Name.LocalName, a.Value)));
+            }
+            return root;
         }
 
         static string Join(string folder, string target)
@@ -493,7 +553,31 @@ static class DocxImport
 
         // ---- paragraphs and tables, one after the other ----
 
+        /// <summary>How deep tables in cells, boxes and the like are followed; what lies deeper is read as plain paragraphs.</summary>
+        const int MostNesting = 32;
+        int nesting;
+
         void Blocks(XElement container, List<Paragraph> into, bool body)
+        {
+            if (nesting >= MostNesting)
+            {
+                // Deeper than any real document: its paragraphs one after the other, read without going deeper.
+                Count("nested too deep");
+                var stack = new Stack<XElement>(container.Elements().Reverse());
+                while (stack.Count > 0)
+                {
+                    var e = stack.Pop();
+                    if (e.Name == W + "p") Paragraph(e, into, false);
+                    else foreach (var child in e.Elements().Reverse()) stack.Push(child);
+                }
+                return;
+            }
+            nesting++;
+            try { BlocksHere(container, into, body); }
+            finally { nesting--; }
+        }
+
+        void BlocksHere(XElement container, List<Paragraph> into, bool body)
         {
             foreach (var e in container.Elements())
             {
@@ -505,7 +589,8 @@ static class DocxImport
                     {
                         // A table where this program can hold text only: its cells, one paragraph after the other.
                         Count("tables inside");
-                        foreach (var cell in e.Descendants(W + "tc")) Blocks(cell, into, false);
+                        // The cells of this table only: a table inside one of them is read when that cell is.
+                        foreach (var cell in e.Descendants(W + "tc").Where(tc => tc.Ancestors(W + "tbl").First() == e)) Blocks(cell, into, false);
                     }
                 }
                 else if (e.Name == W + "sdt" && e.Element(W + "sdtContent") is { } content) Blocks(content, into, body);
@@ -1796,6 +1881,7 @@ static class DocxImport
                     "comments" => "Comments were left out.",
                     "tracked changes" => "Tracked changes were taken as accepted; what they had deleted is not here.",
                     "tables inside" => "Tables inside table cells, text boxes or footnotes (" + count + ") became lines of text.",
+                    "nested too deep" => "Tables or boxes nested more than " + MostNesting + " deep (" + count + "): what lies deeper became lines of text.",
                     _ => "Left out: " + what + " (" + count + ").",
                 });
             return notes;

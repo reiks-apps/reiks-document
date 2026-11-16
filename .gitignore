@@ -10,3 +10,4 @@ setup/publish/
 setup/payload.zip
 *.log
 __pycache__/
+downloads/

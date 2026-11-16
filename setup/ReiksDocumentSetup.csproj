@@ -11,7 +11,7 @@
     <AssemblyName>ReiksDocumentSetup</AssemblyName>
     <RootNamespace>ReiksDocument</RootNamespace>
     <Product>Reiks Document Setup</Product>
-    <Version>0.37.1</Version>
+    <Version>0.37.2</Version>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);WPF0001</NoWarn>
